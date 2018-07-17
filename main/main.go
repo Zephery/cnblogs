@@ -4,11 +4,15 @@ import (
 	"net/http"
 	"net/url"
 	"io/ioutil"
+	"database/sql"
 	"fmt"
+	_ "github.com/Go-SQL-Driver/MySQL"
 	"encoding/json"
+	"strconv"
+	"time"
 )
 
-type CnBlog []struct {
+type CnBlog struct {
 	ID           int    `json:"Id"`
 	Title        string `json:"Title"`
 	URL          string `json:"Url"`
@@ -50,12 +54,38 @@ func ExampleScrape() {
 	resp, _ := client.Do(req)
 	blogList, _ := ioutil.ReadAll(resp.Body)
 	resp.Body.Close()
-	fmt.Print(string(blogList))
+	//fmt.Print(string(blogList))
 
-	//
+	//https://blog.csdn.net/u011304970/article/details/70769949
+
+	var dbgInfos []CnBlog
+	json.Unmarshal(blogList, &dbgInfos)
+	fmt.Print(dbgInfos)
+
+	db, err := sql.Open("mysql", "root:helloroot@tcp(119.23.46.71:3306)/myblog?charset=utf8")
+	if err != nil {
+		fmt.Print(err)
+	}
+	for _, value := range dbgInfos {
+		fmt.Print(value)
+		var id = value.ID
+		var Title = value.Title
+		var PostDate = value.PostDate
+		fmt.Print(id, Title, PostDate)
+		getUrl := "https://api.cnblogs.com/api/blogposts/" + strconv.Itoa(id) + "/body"
+		reqest, _ := http.NewRequest("GET", getUrl, nil)
+		reqest.Header.Add("Authorization", "Bearer "+accessToken)
+		response, _ := client.Do(reqest)
+		temp, _ := ioutil.ReadAll(response.Body)
+		blog := string(temp)
+		fmt.Print(blog)
+
+		stmt, _ := db.Prepare("insert sync_blog set cn_blogs_id=?,blog_id=?,create_time=?")
+		res, _ := stmt.Exec(id, 23, time.Now())
+		fmt.Println(res)
+	}
 
 }
-
 
 func main() {
 	ExampleScrape()
