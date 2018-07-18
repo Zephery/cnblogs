@@ -73,17 +73,42 @@ func ExampleScrape() {
 		var PostDate = value.PostDate
 		fmt.Print(id, Title, PostDate)
 		getUrl := "https://api.cnblogs.com/api/blogposts/" + strconv.Itoa(id) + "/body"
-		reqest, _ := http.NewRequest("GET", getUrl, nil)
-		reqest.Header.Add("Authorization", "Bearer "+accessToken)
-		response, _ := client.Do(reqest)
+		request, _ := http.NewRequest("GET", getUrl, nil)
+		request.Header.Add("Authorization", "Bearer "+accessToken)
+		response, _ := client.Do(request)
 		temp, _ := ioutil.ReadAll(response.Body)
 		blog := string(temp)
 		fmt.Print(blog)
 
+		//content: baerberrger
+		//title: f'we'a'f'we
+		//tagforsplit: fwefew
+		//categoryid: 0
+		body := url.Values{"title": {Title}, "content": {blog}, "tagforsplit": {"博客园"}, "categoryid": {"0"}}
+		httpPostForm(body)
+
 		stmt, _ := db.Prepare("insert sync_blog set cn_blogs_id=?,blog_id=?,create_time=?")
 		res, _ := stmt.Exec(id, 23, time.Now())
 		fmt.Println(res)
+
 	}
+
+}
+
+func httpPostForm(data url.Values) {
+	resp, err := http.PostForm("http://www.wenzhihuai.com", data)
+
+	if err != nil {
+		// handle error
+	}
+
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		// handle error
+	}
+
+	fmt.Println(string(body))
 
 }
 
